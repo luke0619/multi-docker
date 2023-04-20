@@ -1,0 +1,17 @@
+language: generic 
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t luke0619s/react-test -f ./client/Dockerfile.dev ./client # 根據Dockerfile.dev建造image 並以./client作為context
+
+script:
+  - docker run -e CI=true luke0619s/react-test npm test
+
+# 替AWS的EB建置image
+after_success:
+  - docker build -t luke0619s/multi-client ./client
+  - docker build -t luke0619s/multi-nginx ./nginx
+  - docker build -t luke0619s/multi-server ./server
+  - docker build -t luke0619s/multi-worker ./worker

@@ -1,0 +1,50 @@
+version: '3'
+services:
+  postgres:
+    image: "postgres:latest"
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+  redis:
+    image: 'redis:latest'
+  nginx: # 這個服務是負責路由整個應用程式的，所以無論如何都要重啟
+    restart: always
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:80'
+  api:
+    build: 
+      dockerfile: Dockerfile.dev
+      context: ./server # . means look in the current directory ./server means 使用server資料夾底下的檔案作為context
+    volumes:
+      - /app/node_modules # inside the container don't try to overwrite this folder don't try to redirect access to it.
+      - ./server:/app # 將本機端server資料夾底下的檔案全部映射到容器底下的app資料夾底下 volumes的好處是在本機端更動應用程式時能即時反應到Container
+    environment: # 設定環境變數
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password
+      - PGPORT=5432
+  client:
+    build:
+      dockerfile: Dockerfile.dev # 指定dockerfile檔案
+      context: ./client # 上下文的source code 
+    volumes:
+      - /app/node_modules
+      - ./client:/app
+    environment:
+      - WDS_SOCKET_PORT=0
+  worker: # worker如果一直計算非常消耗資源 不建議重啟
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+  
